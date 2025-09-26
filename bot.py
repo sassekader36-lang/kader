@@ -5,6 +5,21 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 # ✅ التوكن
 TOKEN = "8277901276:AAHlBTkn3FgWuDrcwrHRIS1DEJRllKr1Hfg"
 
+# ✅ خادم ويب وهمي لمنع توقف Render
+class SimpleHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is alive")
+
+def run_web_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("", port), SimpleHandler)
+    print(f"🌐 Web server running on port {port}")
+    server.serve_forever()
+
+threading.Thread(target=run_web_server).start()
+
 # 🧠 الأقسام الفرعية
 section_map = {
     "📄 QCM": "qcm",
