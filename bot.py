@@ -1,4 +1,6 @@
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
@@ -74,11 +76,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
-# 🔙 الرجوع
 async def go_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await start(update, context)
 
-# 📚 السنة أولى
 async def first_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
     subjects = [
         ["📘 Anatomie", "🧪 Chimie"],
@@ -92,7 +92,6 @@ async def first_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["last_state"] = "first_year"
     await update.message.reply_text("📚 السنة أولى طب:\nاختر المادة:", reply_markup=reply_markup)
 
-# 📘 السنة ثانية
 async def second_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
     subjects = [
         ["Cardio", "Digestif"],
@@ -105,7 +104,6 @@ async def second_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["last_state"] = "second_year"
     await update.message.reply_text("📘 السنة ثانية طب:\nاختر المادة:", reply_markup=reply_markup)
 
-# 📕 السنة ثالثة
 async def third_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
     subjects = [
         ["Biochimie", "Immunologie"],
@@ -117,7 +115,6 @@ async def third_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["last_state"] = "third_year"
     await update.message.reply_text("📕 السنة ثالثة طب:\nاختر المادة:", reply_markup=reply_markup)
 
-# 📂 عرض الأقسام الفرعية
 async def show_subsections(update: Update, context: ContextTypes.DEFAULT_TYPE):
     subject = update.message.text
     context.user_data["current_subject"] = subject
@@ -126,7 +123,6 @@ async def show_subsections(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(f"{subject}:\nاختر الفصل:", reply_markup=reply_markup)
 
-# 📁 إرسال الملفات حسب المادة والقسم
 async def send_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     subject = context.user_data.get("current_subject")
     section = update.message.text
@@ -160,21 +156,16 @@ async def send_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for file_name in files:
         file_path = os.path.join(target_folder, file_name)
-
-        if file_name.lower().endswith(".txt"):
-            try:
+        try:
+            if file_name.lower().endswith(".txt"):
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     await update.message.reply_text(f"📄 محتوى الملف ({file_name}):\n{content}")
-            except Exception:
-                await update.message.reply_text(f"⚠️ تعذر قراءة الملف النصي: {file_name}")
-        else:
-            try:
+            else:
                 await update.message.reply_document(document=open(file_path, "rb"))
-            except Exception:
-                await update.message.reply_text(f"⚠️ خطأ في تحميل الملف: {file_name}")
+        except Exception:
+            await update.message.reply_text(f"⚠️ تعذر تحميل الملف: {file_name}")
 
-# 🧷 الأقسام العامة
 async def static_section(update: Update, context: ContextTypes.DEFAULT_TYPE):
     section = update.message.text
     folder_path = static_sections.get(section)
@@ -190,21 +181,16 @@ async def static_section(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for file_name in files:
         file_path = os.path.join(folder_path, file_name)
-
-        if file_name.lower().endswith(".txt"):
-            try:
+        try:
+            if file_name.lower().endswith(".txt"):
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     await update.message.reply_text(f"📄 محتوى الملف ({file_name}):\n{content}")
-            except Exception:
-                await update.message.reply_text(f"⚠️ تعذر قراءة الملف النصي: {file_name}")
-        else:
-            try:
+            else:
                 await update.message.reply_document(document=open(file_path, "rb"))
-            except Exception:
-                await update.message.reply_text(f"⚠️ تعذر إرسال الملف: {file_name}")
+        except Exception:
+            await update.message.reply_text(f"⚠️ تعذر إرسال الملف: {file_name}")
 
-# 🌐 روابط التواصل الاجتماعي
 async def show_social_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
     folder_path = "files/social"
 
@@ -219,48 +205,12 @@ async def show_social_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for file_name in files:
         file_path = os.path.join(folder_path, file_name)
-
-        if file_name.lower().endswith(".txt"):
-            try:
+        try:
+            if file_name.lower().endswith(".txt"):
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     await update.message.reply_text(f"🌐 روابط التواصل ({file_name}):\n{content}")
-            except Exception:
-                await update.message.reply_text(f"⚠️ تعذر قراءة الملف النصي: {file_name}")
-        else:
-            try:
+            else:
                 await update.message.reply_document(document=open(file_path, "rb"))
-            except Exception:
-                await update.message.reply_text(f"⚠️ تعذر إرسال الملف: {file_name}")
-
-# 🚀 تشغيل البوت
-app = ApplicationBuilder().token(TOKEN).build()
-
-# أوامر البداية والتنقل
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📚 السنة أولى طب$"), first_year))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📘 السنة ثانية طب$"), second_year))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📕 السنة ثالثة طب$"), third_year))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^🔙 رجوع$"), go_back))
-
-# المواد الدراسية
-for subject in first_year_subjects + second_year_subjects + third_year_subjects:
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{subject}$"), show_subsections))
-
-# الأقسام الفرعية داخل المواد
-for section in section_map.keys():
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{section}$"), send_file))
-
-# الأقسام العامة مثل الكتب والمواقع والأدعية والدرايف والمطور
-for static in static_sections.keys():
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{static}$"), static_section))
-
-# قسم روابط التواصل الاجتماعي للنادي والأعضاء المؤسسين
-app.add_handler(MessageHandler(
-    filters.TEXT & filters.Regex("^🌐 وساىل التواصل الاجتماعي الخاصة بالنادي والاعضاء المؤسسين$"),
-    show_social_links
-))
-
-# ✅ تشغيل البوت
-print("✅ البوت يعمل الآن وينتظر الرسائل...")
-app.run_polling()
+        except Exception:
+            await update.message.reply_text(f"⚠️ تعذر
