@@ -1,24 +1,22 @@
 import os
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from flask import Flask
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 # ✅ التوكن
 TOKEN = "8277901276:AAHlBTkn3FgWuDrcwrHRIS1DEJRllKr1Hfg"
 
-# ✅ خادم ويب وهمي لمنع توقف Render
-class SimpleHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is alive")
+# ✅ خادم ويب وهمي لمنع توقف Render باستخدام Flask
+app_web = Flask('')
+
+@app_web.route('/')
+def home():
+    return "Bot is alive"
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("", port), SimpleHandler)
-    print(f"🌐 Web server running on port {port}")
-    server.serve_forever()
+    app_web.run(host='0.0.0.0', port=port)
 
 threading.Thread(target=run_web_server).start()
 
@@ -208,7 +206,6 @@ async def show_social_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             if file_name.lower().endswith(".txt"):
                 with open(file_path, "r", encoding="utf-8") as f:
-
                     content = f.read()
                     await update.message.reply_text(f"🌐 روابط التواصل ({file_name}):\n{content}")
             else:
@@ -216,33 +213,37 @@ async def show_social_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             await update.message.reply_text(f"⚠️ تعذر إرسال الملف: {file_name}")
 
-# 🚀 تشغيل البوت
-app = ApplicationBuilder().token(TOKEN).build()
+if __name__ == "__main__":
+    try:
+        # 🚀 تشغيل البوت
+        app = ApplicationBuilder().token(TOKEN).build()
 
-# أوامر البداية والتنقل
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📚 السنة أولى طب$"), first_year))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📘 السنة ثانية طب$"), second_year))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📕 السنة ثالثة طب$"), third_year))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^🔙 رجوع$"), go_back))
+        # أوامر البداية والتنقل
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📚 السنة أولى طب$"), first_year))
+        app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📘 السنة ثانية طب$"), second_year))
+        app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📕 السنة ثالثة طب$"), third_year))
+        app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^🔙 رجوع$"), go_back))
 
-# المواد الدراسية
-for subject in first_year_subjects + second_year_subjects + third_year_subjects:
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{subject}$"), show_subsections))
+        # المواد الدراسية
+        for subject in first_year_subjects + second_year_subjects + third_year_subjects:
+            app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{subject}$"), show_subsections))
 
-# الأقسام الفرعية داخل المواد
-for section in section_map.keys():
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{section}$"), send_file))
+        # الأقسام الفرعية داخل المواد
+        for section in section_map.keys():
+            app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{section}$"), send_file))
 
-# الأقسام العامة مثل الكتب والمواقع والأدعية والدرايف والمطور
-for static in static_sections.keys():
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{static}$"), static_section))
+        # الأقسام العامة مثل الكتب والمواقع والأدعية والدرايف والمطور
+        for static in static_sections.keys():
+            app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{static}$"), static_section))
 
-# قسم روابط التواصل الاجتماعي للنادي والأعضاء المؤسسين
-app.add_handler(MessageHandler(
-    filters.TEXT & filters.Regex("^🌐 وساىل التواصل الاجتماعي الخاصة بالنادي والاعضاء المؤسسين$"),
-    show_social_links
-))
+        # قسم روابط التواصل الاجتماعي للنادي والأعضاء المؤسسين
+        app.add_handler(MessageHandler(
+            filters.TEXT & filters.Regex("^🌐 وساىل التواصل الاجتماعي الخاصة بالنادي والاعضاء المؤسسين$"),
+            show_social_links
+        ))
 
-print("✅ البوت يعمل الآن وينتظر الرسائل...")
-app.run_polling()
+        print("✅ البوت يعمل الآن وينتظر الرسائل...")
+        app.run_polling()
+    except Exception as e:
+        print(f"❌ حدث خطأ أثناء تشغيل البوت: {e}")
