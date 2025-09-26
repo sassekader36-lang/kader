@@ -215,3 +215,34 @@ async def show_social_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_document(document=open(file_path, "rb"))
         except Exception:
             await update.message.reply_text(f"⚠️ تعذر إرسال الملف: {file_name}")
+
+# 🚀 تشغيل البوت
+app = ApplicationBuilder().token(TOKEN).build()
+
+# أوامر البداية والتنقل
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📚 السنة أولى طب$"), first_year))
+app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📘 السنة ثانية طب$"), second_year))
+app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📕 السنة ثالثة طب$"), third_year))
+app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^🔙 رجوع$"), go_back))
+
+# المواد الدراسية
+for subject in first_year_subjects + second_year_subjects + third_year_subjects:
+    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{subject}$"), show_subsections))
+
+# الأقسام الفرعية داخل المواد
+for section in section_map.keys():
+    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{section}$"), send_file))
+
+# الأقسام العامة مثل الكتب والمواقع والأدعية والدرايف والمطور
+for static in static_sections.keys():
+    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{static}$"), static_section))
+
+# قسم روابط التواصل الاجتماعي للنادي والأعضاء المؤسسين
+app.add_handler(MessageHandler(
+    filters.TEXT & filters.Regex("^🌐 وساىل التواصل الاجتماعي الخاصة بالنادي والاعضاء المؤسسين$"),
+    show_social_links
+))
+
+print("✅ البوت يعمل الآن وينتظر الرسائل...")
+app.run_polling()
