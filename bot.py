@@ -208,9 +208,10 @@ async def show_social_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             if file_name.lower().endswith(".txt"):
                 with open(file_path, "r", encoding="utf-8") as f:
+
                     content = f.read()
                     await update.message.reply_text(f"🌐 روابط التواصل ({file_name}):\n{content}")
             else:
                 await update.message.reply_document(document=open(file_path, "rb"))
         except Exception:
-            await update.message.reply_text(f"⚠️ تعذر
+            await update.message.reply_text(f"⚠️ تعذر إرسال الملف: {file_name}")
