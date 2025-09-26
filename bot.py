@@ -213,8 +213,6 @@ async def show_social_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             await update.message.reply_text(f"⚠️ تعذر إرسال الملف: {file_name}")
 
-if __name__ == "__main__":
-    try:
         # 🚀 تشغيل البوت
         app = ApplicationBuilder().token(TOKEN).build()
 
@@ -242,6 +240,12 @@ if __name__ == "__main__":
             filters.TEXT & filters.Regex("^🌐 وساىل التواصل الاجتماعي الخاصة بالنادي والاعضاء المؤسسين$"),
             show_social_links
         ))
+
+if __name__ == "__main__":
+    try:
+        app = ApplicationBuilder().token(TOKEN).build()
+
+        # إضافة جميع الـ handlers هنا كما فعلت سابقًا...
 
         print("✅ البوت يعمل الآن وينتظر الرسائل...")
         app.run_polling()
