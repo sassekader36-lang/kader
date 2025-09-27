@@ -14,12 +14,20 @@ class SimpleHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"Bot is alive")
 
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Allow", "GET, HEAD, OPTIONS")
+        self.end_headers()
+
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("", port), SimpleHandler)
     print(f"🌐 Web server running on port {port}")
     server.serve_forever()
-
 threading.Thread(target=run_web_server).start()
 
 # 🧠 الأقسام الفرعية
@@ -72,7 +80,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     context.user_data["last_state"] = "start"
     await update.message.reply_text(
-        "👋 أهلاً بك!\nبوت جينيورا مخصص لطلبة الطب.\nاضغط /startثم اختر القسم المطلوب:",
+        "👋 أهلاً بك!\nبوت جينيورا مخصص لطلبة الطب.\nاضغط/start\n اختر القسم المطلوب:",
         reply_markup=reply_markup
     )
 
