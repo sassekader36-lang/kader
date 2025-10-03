@@ -1,256 +1,213 @@
+import telebot
+from telebot import types
 import os
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-# ✅ التوكن
-TOKEN = "8277901276:AAHlBTkn3FgWuDrcwrHRIS1DEJRllKr1Hfg"
+# إعداد التوكن وتشغيل البوت
+TOKEN = "8239915227:AAFSi9Cx4u7SpCoyVwRPnzbgUrc3fhwJxLI"
+bot = telebot.TeleBot(TOKEN)
 
-# ✅ خادم ويب وهمي لمنع توقف Render
-class SimpleHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot is alive")
-
-    def do_HEAD(self):
-        self.send_response(200)
-        self.end_headers()
-
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header("Allow", "GET, HEAD, OPTIONS")
-        self.end_headers()
-
-def run_web_server():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("", port), SimpleHandler)
-    print(f"🌐 Web server running on port {port}")
-    server.serve_forever()
-threading.Thread(target=run_web_server).start()
-
-# 🧠 الأقسام الفرعية
-section_map = {
-    "📄 QCM": "qcm",
-    "📄Cour": "cour",
-    "📄 Resumer": "resumer",
-    "Video": "video"
+# الأقسام الرئيسية والفرعية
+SECTIONS = {
+    "📅 البرنامج السنوي": ["سنة أولى", "سنة ثانية", "سنة ثالثة"],
+    "🕒 استعمال الزمن": ["سنة أولى", "سنة ثانية", "سنة ثالثة"],
+    "🧑‍⚕️ سنة أولى طب": {
+        "اناتومي": ["cour", "qcm", "resumer", "video"],
+        "فيزيولوجي": ["cour", "qcm", "resumer", "video"],
+        "امبريولوجي": ["cour", "qcm", "resumer", "video"],
+        "شيمي": ["cour", "qcm", "resumer", "video"],
+        "بيوشيمي": ["cour", "qcm", "resumer", "video"],
+        "هيستولوجي": ["cour", "qcm", "resumer", "video"],
+        "بيوستات": ["cour", "qcm", "resumer", "video"],
+        "SSH": ["cour", "qcm", "resumer", "video"],
+        "سيتولوجي": ["cour", "qcm", "resumer", "video"],
+        "بيوفيزيك": ["cour", "qcm", "resumer", "video"]
+    },
+    "🧑‍⚕️ سنة ثانية طب": {
+    "Cardio-respiratoire": ["cour", "qcm", "resumer", "video"],
+    "Degestif": ["cour", "qcm", "resumer", "video"],
+    "Urinaire": ["cour", "qcm", "resumer", "video"],
+    "Le systeme endocrinien": ["cour", "qcm", "resumer", "video"],
+    "le systeme nerveux": ["cour", "qcm", "resumer", "video"],
+    "Immunologie": ["cour", "qcm", "resumer", "video"],
+    "Genitique": ["cour", "qcm", "resumer", "video"]
+},
+"🧑‍⚕️ سنة ثالثة طب": {
+    "Appareil digestif et organes hématopoïétiques": ["cour", "qcm", "resumer", "video"],
+    "Appareil endocrinien, appareil de reproduction & Appareil urinaire": ["cour", "qcm", "resumer", "video"],
+    "Appareil Neurologique, Locomoteur & Cutanée": ["cour", "qcm", "resumer", "video"],
+    "Appareil Cardio-Vasculaire et Respiratoire": ["cour", "qcm", "resumer", "video"],
+    "Immunologie": ["cour", "qcm", "resumer", "video"],
+    "Parasitologie mycologie": ["cour", "qcm", "resumer", "video"],
+    "Microbiologie medicale": ["cour", "qcm", "resumer", "video"],
+    "Parmacologie clinique": ["cour", "qcm", "resumer", "video"],
+    "Anatomie et cytologie pathologique": ["cour", "qcm", "resumer", "video"]
 }
 
-# 🧠 السنة الأولى
-first_year_subjects = [
-    "📘 Anatomie", "🧪 Chimie", "🧬 Biochimie", "🔬 Cytologie",
-    "⚛️ Biophysique", "💓 Physiologie", "👶 Embryologie", "📖 SSH",
-    "🧫 Histologie", "📊 Biostatistique"
-]
-
-# 🧠 السنة الثانية
-second_year_subjects = [
-    "Cardio", "Digestif", "Urinaire", "Endocrinien",
-    "Neurologie", "Immunologie", "Génétique"
-]
-
-# 🧠 السنة الثالثة
-third_year_subjects = [
-    "Biochimie", "Immunologie", "Pharmacologie", "Physiopathologie",
-    "Radiologie", "Sémiologie"
-]
-
-# 🧠 الأقسام العامة
-static_sections = {
-    "📚 كتب طبية": "files/livres",
-    "🌐 مواقع مفيدة": "files/sites",
-    "🤲 أدعية": "files/ad3ya",
-    "📎 درايف جميع الكليات والملحقات": "files/drive",
-    "👨‍💻 حسابات المطور": "files/developer"
+    },
+    "📢 قنوات تلجرام": ["قنوات تعليمية", "قنوات طبية", "قنوات عامة"],
+    "🌐 مواقع وتطبيقات مفيدة": ["مواقع", "تطبيقات", "تطبيقات باشتراكات مجانية"],
+    "🕊️ أدعية": ["أدعية الصباح والمساء", "أدعية الامتحان", "أدعية متنوعة"],
+    "👥 حسابات النادي والأعضاء الرىيسيين": ["رئيس النادي", "نائب الرئيس", "أعضاء الفريق"],
+    "💻 حسابات المطور": ["insagram", "Telegram", "facebook"],
+    "🚀 قسم تطوير المهارات": ["مهارات الدراسة", "مهارات تقنية"],
+    "📚 كتب طبية": ["كتب سنة أولى", "كتب سنة ثانية", "كتب سنة ثالثة"],
+    "📂 درايفات جميع الملحقات والكليات": ["كلية الطب وهران", " باقي الكليات الملحقات"],
+    "🤖 بوتات مفيدة": ["بوتات مكتبة", "اخرى"]
 }
 
-# 🏁 البداية
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        ["📚 السنة أولى طب", "📘 السنة ثانية طب"],
-        ["📕 السنة ثالثة طب", "📚 كتب طبية"],
-        ["🌐 مواقع مفيدة", "🤲 أدعية"],
-        ["📎 درايف جميع الكليات والملحقات"],
-        ["🌐 وساىل التواصل الاجتماعي الخاصة بالنادي والاعضاء المؤسسين"],
-        ["👨‍💻 حسابات المطور"],
-        ["🔙 رجوع"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    context.user_data["last_state"] = "start"
-    await update.message.reply_text(
-        "👋 أهلاً بك!\nبوت جينيورا مخصص لطلبة الطب.\nاضغط/start\n اختر القسم المطلوب:",
-        reply_markup=reply_markup
-    )
+user_state = {}
 
-async def go_back(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await start(update, context)
+# زر الرجوع والصفحة الرئيسية
+def add_navigation_buttons(markup):
+    markup.add("🔙 رجوع")
+    markup.add("🏠 الصفحة الرئيسية")
+    return markup
 
-async def first_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    subjects = [
-        ["📘 Anatomie", "🧪 Chimie"],
-        ["🧬 Biochimie", "🔬 Cytologie"],
-        ["⚛️ Biophysique", "💓 Physiologie"],
-        ["👶 Embryologie", "📖 SSH"],
-        ["🧫 Histologie", "📊 Biostatistique"],
-        ["🔙 رجوع"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(subjects, resize_keyboard=True)
-    context.user_data["last_state"] = "first_year"
-    await update.message.reply_text("📚 السنة أولى طب:\nاختر المادة:", reply_markup=reply_markup)
+# بدء البوت
+@bot.message_handler(commands=['start', 'upload'])
+def start_upload(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    buttons = list(SECTIONS.keys())
+    for i in range(0, len(buttons), 2):
+        markup.add(*buttons[i:i+2])
+    add_navigation_buttons(markup)
+    user_state[message.chat.id] = {"step": "section"}
+    bot.send_message(message.chat.id, "📂 اختر القسم الرئيسي لعرض الملفات:", reply_markup=markup)
 
-async def second_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    subjects = [
-        ["Cardio", "Digestif"],
-        ["Urinaire", "Endocrinien"],
-        ["Neurologie", "Immunologie"],
-        ["Génétique"],
-        ["🔙 رجوع"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(subjects, resize_keyboard=True)
-    context.user_data["last_state"] = "second_year"
-    await update.message.reply_text("📘 السنة ثانية طب:\nاختر المادة:", reply_markup=reply_markup)
+# الصفحة الرئيسية
+@bot.message_handler(func=lambda msg: msg.text == "🏠 الصفحة الرئيسية")
+def go_home(message):
+    start_upload(message)
 
-async def third_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    subjects = [
-        ["Biochimie", "Immunologie"],
-        ["Pharmacologie", "Physiopathologie"],
-        ["Radiologie", "Sémiologie"],
-        ["🔙 رجوع"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(subjects, resize_keyboard=True)
-    context.user_data["last_state"] = "third_year"
-    await update.message.reply_text("📕 السنة ثالثة طب:\nاختر المادة:", reply_markup=reply_markup)
-
-async def show_subsections(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    subject = update.message.text
-    context.user_data["current_subject"] = subject
-    context.user_data["last_state"] = "subsections"
-    keyboard = [["📄 QCM", "📄Cour", "📄 Resumer", "Video"], ["🔙 رجوع"]]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text(f"{subject}:\nاختر الفصل:", reply_markup=reply_markup)
-
-async def send_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    subject = context.user_data.get("current_subject")
-    section = update.message.text
-    folder_name = section_map.get(section)
-
-    if not folder_name:
-        await update.message.reply_text("⚠️ القسم غير معروف.")
+# الرجوع خطوة للخلف
+@bot.message_handler(func=lambda msg: msg.text == "🔙 رجوع")
+def go_back_step(message):
+    state = user_state.get(message.chat.id)
+    if not state:
+        start_upload(message)
         return
 
-    if subject in first_year_subjects:
-        year_folder = "annee1"
-    elif subject in second_year_subjects:
-        year_folder = "annee2"
-    elif subject in third_year_subjects:
-        year_folder = "annee3"
+    step = state.get("step")
+    if step == "subsection":
+        start_upload(message)
+    elif step == "subject":
+        choose_subsection(message)
+    elif step == "file_type":
+        choose_subject(message)
+    elif step == "semester":
+        choose_file_type(message)
+    elif step == "section":
+        bot.send_message(message.chat.id, "🔙 أنت في الصفحة الرئيسية بالفعل.")
     else:
-        await update.message.reply_text("⚠️ المادة غير معروفة.")
+        start_upload(message)
+
+# اختيار القسم الفرعي أو المادة
+@bot.message_handler(func=lambda msg: user_state.get(msg.chat.id, {}).get("step") == "section")
+def choose_subsection(message):
+    section = message.text.strip()
+    if section not in SECTIONS:
+        bot.send_message(message.chat.id, "❗️الاختيار غير صحيح، يرجى اختيار من القائمة.")
         return
 
-    clean_subject = subject.split(" ", 1)[-1].lower()
-    target_folder = f"files/{year_folder}/{clean_subject}/{folder_name}"
+    user_state[message.chat.id]["section"] = section
+    subsections = SECTIONS[section]
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 
-    if not os.path.exists(target_folder):
-        await update.message.reply_text("📁 لا توجد ملفات متاحة لهذا القسم حالياً.")
+    if isinstance(subsections, list):
+        for item in subsections:
+            markup.add(item)
+        add_navigation_buttons(markup)
+        user_state[message.chat.id]["step"] = "subsection"
+        bot.send_message(message.chat.id, "📁 اختر القسم الفرعي لعرض الملفات:", reply_markup=markup)
+    elif isinstance(subsections, dict):
+        for item in subsections:
+            markup.add(item)
+        add_navigation_buttons(markup)
+        user_state[message.chat.id]["step"] = "subject"
+        bot.send_message(message.chat.id, "📘 اختر المادة لعرض الملفات:", reply_markup=markup)
+
+# عرض ملفات القسم الفرعي
+@bot.message_handler(func=lambda msg: user_state.get(msg.chat.id, {}).get("step") == "subsection")
+def browse_show_subsection(message):
+    subsection = message.text.strip()
+    section = user_state[message.chat.id]["section"]
+    if subsection not in SECTIONS.get(section, []):
+        bot.send_message(message.chat.id, "❗️الاختيار غير صحيح، يرجى اختيار من القائمة.")
+        return
+    path = os.path.join("uploads", section, subsection)
+    send_files_from_path(message.chat.id, path)
+
+# اختيار نوع الملف حسب المادة
+@bot.message_handler(func=lambda msg: user_state.get(msg.chat.id, {}).get("step") == "subject")
+def choose_subject(message):
+    subject = message.text.strip()
+    section = user_state[message.chat.id]["section"]
+    if subject not in SECTIONS.get(section, {}):
+        bot.send_message(message.chat.id, "❗️الاختيار غير صحيح، يرجى اختيار من القائمة.")
+        return
+    user_state[message.chat.id]["subject"] = subject
+    file_types = SECTIONS[section][subject]
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for item in file_types:
+        markup.add(item)
+    add_navigation_buttons(markup)
+    user_state[message.chat.id]["step"] = "file_type"
+    bot.send_message(message.chat.id, "📂 اختر نوع الملف لعرضه:", reply_markup=markup)
+
+# اختيار الفصل الدراسي
+@bot.message_handler(func=lambda msg: user_state.get(msg.chat.id, {}).get("step") == "file_type")
+def choose_file_type(message):
+    file_type = message.text.strip()
+    section = user_state[message.chat.id]["section"]
+    subject = user_state[message.chat.id]["subject"]
+    if file_type not in SECTIONS.get(section, {}).get(subject, []):
+        bot.send_message(message.chat.id, "❗️الاختيار غير صحيح، يرجى اختيار من القائمة.")
+        return
+    user_state[message.chat.id]["file_type"] = file_type
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add("الفصل الأول", "الفصل الثاني")
+    add_navigation_buttons(markup)
+    user_state[message.chat.id]["step"] = "semester"
+    bot.send_message(message.chat.id, "📅 اختر الفصل لعرض الملفات:", reply_markup=markup)
+
+# عرض الملفات النهائية
+@bot.message_handler(func=lambda msg: user_state.get(msg.chat.id, {}).get("step") == "semester")
+def browse_show_files(message):
+    semester = message.text.strip()
+    if semester not in ["الفصل الأول", "الفصل الثاني"]:
+        bot.send_message(message.chat.id, "❗️الاختيار غير صحيح، يرجى اختيار من القائمة.")
+        return
+    section = user_state[message.chat.id]["section"]
+    subject = user_state[message.chat.id]["subject"]
+    file_type = user_state[message.chat.id]["file_type"]
+    path = os.path.join("uploads", section, subject, file_type, semester)
+    send_files_from_path(message.chat.id, path)
+
+def send_files_from_path(chat_id, path):
+    if not os.path.exists(path):
+        bot.send_message(chat_id, "❌ لا توجد ملفات في هذا القسم.")
         return
 
-    files = os.listdir(target_folder)
-    if not files:
-        await update.message.reply_text("📁 لا توجد ملفات في هذا القسم.")
-        return
+    files_sent = False
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            full_path = os.path.join(root, file)
+            with open(full_path, 'rb') as f:
+                if file.lower().endswith(('.jpg', '.jpeg', '.png')):
+                    bot.send_photo(chat_id, f)
+                    files_sent = True
+                elif file.lower().endswith(('.pdf', '.doc', '.docx', '.ppt', '.pptx', '.txt')):
+                    bot.send_document(chat_id, f)
+                    files_sent = True
+                else:
+                    bot.send_message(chat_id, f"📎 ملف غير مدعوم: {file}")
+                    files_sent = True
 
-    for file_name in files:
-        file_path = os.path.join(target_folder, file_name)
-        try:
-            if file_name.lower().endswith(".txt"):
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    await update.message.reply_text(f"📄 محتوى الملف ({file_name}):\n{content}")
-            else:
-                await update.message.reply_document(document=open(file_path, "rb"))
-        except Exception:
-            await update.message.reply_text(f"⚠️ تعذر تحميل الملف: {file_name}")
+    if not files_sent:
+        bot.send_message(chat_id, "📂 تم العثور على ملفات، لكن لا يمكن عرضها مباشرة عبر البوت.")
 
-async def static_section(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    section = update.message.text
-    folder_path = static_sections.get(section)
-
-    if not folder_path or not os.path.exists(folder_path):
-        await update.message.reply_text("📁 لا توجد ملفات متاحة حالياً في هذا القسم.")
-        return
-
-    files = os.listdir(folder_path)
-    if not files:
-        await update.message.reply_text("📁 لا توجد ملفات في هذا القسم.")
-        return
-
-    for file_name in files:
-        file_path = os.path.join(folder_path, file_name)
-        try:
-            if file_name.lower().endswith(".txt"):
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    await update.message.reply_text(f"📄 محتوى الملف ({file_name}):\n{content}")
-            else:
-                await update.message.reply_document(document=open(file_path, "rb"))
-        except Exception:
-            await update.message.reply_text(f"⚠️ تعذر إرسال الملف: {file_name}")
-
-async def show_social_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    folder_path = "files/social"
-
-    if not os.path.exists(folder_path):
-        await update.message.reply_text("📁 لا توجد روابط حالياً.")
-        return
-
-    files = os.listdir(folder_path)
-    if not files:
-        await update.message.reply_text("📁 لا توجد ملفات في هذا القسم.")
-        return
-
-    for file_name in files:
-        file_path = os.path.join(folder_path, file_name)
-        try:
-            if file_name.lower().endswith(".txt"):
-                with open(file_path, "r", encoding="utf-8") as f:
-
-                    content = f.read()
-                    await update.message.reply_text(f"🌐 روابط التواصل ({file_name}):\n{content}")
-            else:
-                await update.message.reply_document(document=open(file_path, "rb"))
-        except Exception:
-            await update.message.reply_text(f"⚠️ تعذر إرسال الملف: {file_name}")
-
-# 🚀 تشغيل البوت
-app = ApplicationBuilder().token(TOKEN).build()
-
-# أوامر البداية والتنقل
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📚 السنة أولى طب$"), first_year))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📘 السنة ثانية طب$"), second_year))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^📕 السنة ثالثة طب$"), third_year))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("^🔙 رجوع$"), go_back))
-
-# المواد الدراسية
-for subject in first_year_subjects + second_year_subjects + third_year_subjects:
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{subject}$"), show_subsections))
-
-# الأقسام الفرعية داخل المواد
-for section in section_map.keys():
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{section}$"), send_file))
-
-# الأقسام العامة مثل الكتب والمواقع والأدعية والدرايف والمطور
-for static in static_sections.keys():
-    app.add_handler(MessageHandler(filters.TEXT & filters.Regex(f"^{static}$"), static_section))
-
-# قسم روابط التواصل الاجتماعي للنادي والأعضاء المؤسسين
-app.add_handler(MessageHandler(
-    filters.TEXT & filters.Regex("^🌐 وساىل التواصل الاجتماعي الخاصة بالنادي والاعضاء المؤسسين$"),
-    show_social_links
-))
-
-print("✅ البوت يعمل الآن وينتظر الرسائل...")
-app.run_polling()
+print("✅ البوت جاهز ويعمل الآن...")
+try:
+    bot.polling(none_stop=True)
+except Exception as e:
+    print(f"❌ حدث خطأ أثناء تشغيل البوت: {e}")
